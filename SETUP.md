@@ -34,7 +34,7 @@ git push -u origin master
 ## 3. Crea le due nuove attività pianificate
 
 ```powershell
-$principal = New-ScheduledTaskPrincipal -UserId "augusto" -LogonType Interactive -RunLevel Least
+$principal = New-ScheduledTaskPrincipal -UserId "augusto" -LogonType Interactive -RunLevel Limited
 
 # backup-config: dopo dump-db-daily (20:30), prima di git-snapshot
 $actionCfg  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\mdb\enodb\backup-config.ps1"'
