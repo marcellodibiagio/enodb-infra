@@ -1,0 +1,42 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: mysql:5
+    container_name: enodb-mysql-server
+    restart: unless-stopped
+    volumes:
+#      - ./../enodb-volumes/mysql/my.cnf:/etc/my.cnf
+      - ./../enodb-volumes/mysql/data:/var/lib/mysql
+#      - ./../enodb-volumes/mysql/mysql.log:/var/log/mysql/mysql.log
+    environment:
+      MYSQL_ROOT_PASSWORD: "$MYSQL_ROOT_PASSWORD"
+      #MYSQL_DATABASE: databasename
+      #MYSQL_USER: dbusername
+      #MYSQL_PASSWORD: dbuserpassword
+    ports:
+      - $MYSQL_PORT:3306  # expose container's port 3306 on host's port 33060
+
+  web:
+    image: apachephp  # Crea una nuova image a partire da php:apache
+    #dockerfile: ./Dockerfile
+    build: .
+    container_name: enodb-web-server
+    restart: unless-stopped
+    depends_on:
+      - db
+    links:
+      - db
+    volumes:
+      - ./../enodb-volumes/www:/var/www/html
+      - ./../enodb-volumes/log:/var/log/apache2
+      - ./../enodb-volumes/ssl:/etc/ssl/enodb:ro  # [CLAUDE] certificati SSL (read-only)
+#      - ./../../_DEV/htdocs:/var/www/html
+#      - ./conf/apache:/etc/apache2/sites-enabled/
+#      - ./conf/php:/usr/local/etc/php/
+#      - ./conf:/usr/local/etc/php/conf.d/custom.ini
+    ports:
+      - $HTTP_PORT:80  # expose container's port 80 on host's port 8080, the web service
+      - $HTTPS_PORT:443  # [CLAUDE] porta HTTPS
+
