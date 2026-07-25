@@ -14,12 +14,17 @@ try {
     Set-Location $repoPath
 
     git add -A
+    if ($LASTEXITCODE -ne 0) { throw "git add fallito (exit $LASTEXITCODE)" }
 
     $status = git status --porcelain
     if ($status) {
         $msg = "snapshot automatico $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+
         git commit -m $msg | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "git commit fallito (exit $LASTEXITCODE) - verificare identita' git (user.name/user.email)" }
+
         git push | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "git push fallito (exit $LASTEXITCODE) - verificare credenziali/credential helper" }
     }
 }
 catch {
