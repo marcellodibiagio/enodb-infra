@@ -15,6 +15,12 @@ cd C:\mdb\enodb
 git push   # deve funzionare senza chiedere credenziali interattivamente
 ```
 
+Se compare `fatal: detected dubious ownership in repository` (capita perché il repo è stato inizializzato da un altro account Windows, es. `marcello` invece di `augusto`, o durante un ripristino da disastro su una macchina nuova), è normale: basta aggiungere l'eccezione con l'account che effettivamente esegue git-snapshot.ps1 (`augusto`):
+
+```powershell
+git config --global --add safe.directory C:/mdb/enodb
+```
+
 ## 2. Crea il repo GitHub `enodb-infra` (se non già fatto)
 
 Su github.com, account `marcellodibiagio`: **New repository** → nome `enodb-infra` → **Private** → non inizializzare con README (il repo locale ha già i file). Poi:
