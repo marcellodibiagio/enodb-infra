@@ -3,6 +3,7 @@ Thumbs.db
 
 # Segreti: mai in git, restano solo nel backup zip su Dropbox (backup-config.ps1)
 .env
+cronjobs/ms-access-to-mysql/credentials.local.txt
 
 # Installer vendor statici (~69MB): non beneficiano di versionamento,
 # recuperabili dal sito Oracle o dal backup zip Dropbox

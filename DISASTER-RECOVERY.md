@@ -8,22 +8,22 @@ Procedura di emergenza per il gestionale enodb (negozio). Obiettivo: RTO ~8h (ri
 
 - [ ] Credenziali VPN per raggiungere la rete del negozio da remoto
 - [ ] Credenziali dell'account Windows `augusto` (usato per login sul PC/server e da cui dipendono le attività pianificate)
-- [ ] Accesso all'account Dropbox che sincronizza `ENOTECA\IT\BCK` e `ENOTECA\IT\crontab` (dove vivono i backup e alcuni script)
-- [ ] Accesso al repo GitHub privato `enodb-infra` (config Docker, questo runbook, script)
+- [ ] Accesso all'account Dropbox che sincronizza `ENOTECA\IT\BCK` (dove vivono i dump DB e lo zip di config)
+- [ ] Accesso al repo GitHub privato `enodb-infra` (config Docker, cronjobs, questo runbook)
 - [ ] Accesso al repo GitHub `enodb-app` (frontend Vue)
 - [ ] Contatto del fornitore delle stampanti fiscali (per assistenza su riconfigurazione/certificati se necessario)
-- [ ] Sapere dove si trova il database MS Access sorgente (usato da `clienti_mdb2mysql.bat`) e chi contattare per quello
+- [ ] Password per `\\192.168.1.150\c$` (macchina del gestionale terzo, sorgente del DB MS Access `brainfat.mdb`): vive in `cronjobs\ms-access-to-mysql\credentials.local.txt`, escluso da git — recuperabile dall'ultimo `ENODB-CONFIG_*.zip` in Dropbox, che include anche i file esclusi da git
 
 ## Cosa serve per ricostruire tutto
 
 | Cosa | Dove si trova |
 |---|---|
 | Config Docker (docker-compose.yml, Dockerfile, conf/, oracle/) | Repo `enodb-infra` su GitHub, oppure ultimo `ENODB-CONFIG_*.zip` in Dropbox `ENOTECA\IT\BCK` (contiene anche `.env` e i certificati SSL, esclusi dal repo) |
+| Cronjobs (`dump-db.bat`, `analisi-venduto-del-giorno.bat`, tool ETL MS Access → MySQL) | Cartella `cronjobs/` dentro il repo `enodb-infra` (`C:\mdb\enodb\cronjobs`) — consolidati qui, non più sparsi tra Dropbox e `C:\mdb\MS Access to MySQL` |
 | Dump del database MySQL | Ultimo `ENODB_*.zip` in Dropbox `ENOTECA\IT\BCK` |
 | Frontend Vue (dist da buildare) | Repo `enodb-app` su GitHub |
 | Backend PHP | Copia dev in `C:\Dropbox\_DEV\htdocs` (sincronizzata via Dropbox) — verifica se ci sono hotfix fatti solo in prod non riportati lì |
-| Tool ETL MS Access → MySQL | Ultimo `ENODB-CONFIG_*.zip` (cartella `MS Access to MySQL`) |
-| Definizione delle 3+ attività pianificate | Ultimo `ENODB-CONFIG_*.zip` (cartella `scheduled-tasks`, file XML) |
+| Definizione delle 3+ attività pianificate | Ultimo `ENODB-CONFIG_*.zip` (cartella `scheduled-tasks`, file XML) — dopo l'import, aggiorna comunque l'Action di ciascuna task perché punti a `C:\mdb\enodb\cronjobs\...` |
 
 ## Scenario A — Guasto hardware totale del server
 
@@ -38,7 +38,7 @@ Procedura di emergenza per il gestionale enodb (negozio). Obiettivo: RTO ~8h (ri
    docker exec -i enodb-mysql-server mysql -uroot -p<password> enodb < ENODB_ggmmaaaa.sql
    ```
    (recupera la password da `.env`, chiave `MYSQL_ROOT_PASSWORD` — vedi nota di sicurezza sotto).
-8. **Ricrea le 3+ attività pianificate**: importa gli XML da `scheduled-tasks/` (Task Scheduler → Importa attività), sotto l'account `augusto`.
+8. **Ricrea le 3+ attività pianificate**: importa gli XML da `scheduled-tasks/` (Task Scheduler → Importa attività), sotto l'account `augusto`, poi aggiorna l'Action di ciascuna perché punti a `C:\mdb\enodb\cronjobs\...` (vedi tabella sopra). Per `clienti da ms access a mysql` serve anche: reinstallare il software Bullzip "MS Access to MySQL" e ricreare `cronjobs\ms-access-to-mysql\credentials.local.txt` con la password (recuperabile dall'ultimo `ENODB-CONFIG_*.zip`, che include i file esclusi da git).
 9. **Verifica** (non saltare questo passo, vedi sezione dedicata sotto).
 
 ## Scenario B — Ransomware / compromissione
@@ -59,7 +59,7 @@ Procedura di emergenza per il gestionale enodb (negozio). Obiettivo: RTO ~8h (ri
 
 ## Nota di sicurezza
 
-La password MySQL root è oggi `root`, in chiaro nel file `.env`. È una credenziale debole: da cambiare appena possibile (non solo in emergenza), aggiornando sia `.env` che l'utenza nel container.
+La password MySQL root **risulta di fatto vuota** (confermato dal tool ETL, che si connette con `destinationusername=root`, `destinationpassword=` vuota su `localhost:3306`): il `.env` dichiara `MYSQL_ROOT_PASSWORD=root`, ma quella variabile ha effetto solo alla primissima inizializzazione del DB — se il DB esisteva già prima di quell'impostazione, non ha mai avuto effetto reale. Da correggere appena possibile (non solo in emergenza): impostare davvero una password su root e aggiornare sia `.env` che l'utenza nel container che il tool ETL.
 
 ## Test periodico
 
@@ -69,5 +69,5 @@ Pianificare un test di ripristino completo (su un secondo PC o VM) almeno una vo
 
 ## Dipendenze esterne non coperte da questo runbook
 
-- **Database MS Access sorgente** (usato da `clienti_mdb2mysql.bat`): posizione nota, ma la responsabilità del suo backup non è ancora chiarita — verificare con il fornitore del gestionale terzo.
+- **Database MS Access sorgente** (`brainfat.mdb`): vive su un'altra macchina, `\\192.168.1.150\c$\brainfat\brainfat.mdb` (macchina del gestionale terzo "Brainfat", non gestita da Marcello). La responsabilità del suo backup non è ancora chiarita — verificare con il fornitore. Il tool ETL su questa macchina richiede accesso amministrativo a quella condivisione (vedi checklist pre-volo) e il software Bullzip "MS Access to MySQL" installato in `C:\Program Files (x86)\Bullzip\MS Access to MySQL\` — software di terze parti da reinstallare su una macchina nuova, non recuperabile da backup file.
 - **Script `analisi-venduto-del-giorno.bat`**: verificato — fa solo `curl http://192.168.1.31/_analisivendutodelgiorno`, nessuna dipendenza locale oltre all'app enodb stessa (già coperta dal ripristino). Vive in Dropbox (`ENOTECA\IT\crontab`), già con copia offsite. Nessuna azione necessaria.

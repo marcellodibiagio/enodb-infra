@@ -1,11 +1,12 @@
 <#
-Backup della configurazione infrastrutturale enodb (Docker, ETL, task pianificati).
+Backup della configurazione infrastrutturale enodb (Docker, cronjobs, task pianificati).
 Eseguito da Task Scheduler sul server, deposita uno zip nella stessa cartella
 Dropbox dei dump DB (C:\Users\augusto\Dropbox\ENOTECA\IT\BCK).
 
-Copre: cartella C:\mdb\enodb (docker-compose, Dockerfile, conf, oracle installer),
-i certificati SSL live (C:\mdb\enodb-volumes\ssl), il tool ETL MS Access -> MySQL,
-ed export XML delle attivita pianificate - nulla di tutto questo ha oggi altra copia offsite.
+Copre: cartella C:\mdb\enodb (docker-compose, Dockerfile, conf, oracle installer,
+cronjobs/ con tutti gli script pianificati incluso il tool ETL MS Access -> MySQL)
+e i certificati SSL live (C:\mdb\enodb-volumes\ssl) - nulla di tutto questo ha
+oggi altra copia offsite oltre a questo zip e al repo git enodb-infra.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -24,9 +25,6 @@ try {
 
     if (Test-Path "C:\mdb\enodb-volumes\ssl") {
         Copy-Item "C:\mdb\enodb-volumes\ssl" (Join-Path $workDir "enodb-volumes-ssl") -Recurse -Force
-    }
-    if (Test-Path "C:\mdb\MS Access to MySQL") {
-        Copy-Item "C:\mdb\MS Access to MySQL" (Join-Path $workDir "MS Access to MySQL") -Recurse -Force
     }
 
     $tasksDir = Join-Path $workDir "scheduled-tasks"
