@@ -25,6 +25,21 @@ Procedura di emergenza per il gestionale enodb (negozio). Obiettivo: RTO ~8h (ri
 | Backend PHP | Copia dev in `C:\Dropbox\_DEV\htdocs` (sincronizzata via Dropbox) — verifica se ci sono hotfix fatti solo in prod non riportati lì |
 | Definizione delle 3+ attività pianificate | Ultimo `ENODB-CONFIG_*.zip` (cartella `scheduled-tasks`, file XML) — dopo l'import, aggiorna comunque l'Action di ciascuna task perché punti a `C:\mdb\enodb\cronjobs\...` |
 
+## Orario delle attività pianificate
+
+Ordine voluto: prima tutto ciò che modifica dati, poi il backup del DB, per ultimo config/git — altrimenti il dump notturno rischia di non catturare le scritture serali dell'ETL.
+
+| Ora | Task | Perché in quest'ordine |
+|---|---|---|
+| 14:00 | `clienti da ms access a mysql` (1° giro) | sync clienti, primo passaggio giornaliero |
+| 21:00 | `clienti da ms access a mysql` (2° giro) | cattura eventuali modifiche fatte in negozio nel pomeriggio |
+| 21:05 | `analisi venduto del giorno` | dopo l'ETL, prima del backup |
+| 21:15 | `dump-db-daily` | **dopo** entrambi i job che scrivono dati, così il backup li include |
+| 21:30 | `backup-config` | config/cronjobs, indipendente dal DB |
+| 21:45 | `git-snapshot` | per ultimo, versiona eventuali modifiche del giorno |
+
+**Se ripristini le task da XML dopo un disastro** (Scenario A, punto 8): l'export XML contiene gli orari di quando è stato fatto l'ultimo `backup-config`, che potrebbero non riflettere l'ordine sopra se qualcuno li ha cambiati dopo — verifica/riapplica questo schema con `Set-ScheduledTaskTrigger` invece di fidarti ciecamente dell'import.
+
 ## Scenario A — Guasto hardware totale del server
 
 1. **Procurati una macchina Windows.** Va bene anche un PC d'ufficio già disponibile (il server attuale non è hardware dedicato) o un PC nuovo. Requisiti minimi: Windows 10/11, spazio disco sufficiente per Docker Desktop + volumi.
